@@ -12,11 +12,11 @@ self.addEventListener('activate', event => {
     event.waitUntil(self.clients.claim());
 });
 
-// Evento Fetch: Intercepta todas las peticiones de red.
-self.addEventListener('fetch', event => {
-    // Por ahora, solo respondemos con la petición de red
-    event.respondWith(fetch(event.request));
-});
+// 🔴 IMPORTANTE: eliminamos el evento fetch porque no lo usamos
+// y nos estaba generando errores "Failed to fetch" innecesarios.
+// self.addEventListener('fetch', event => {
+//     event.respondWith(fetch(event.request));
+// });
 
 /* ------------------------------------------------------------------
    LISTENER PARA PUSH (recibe la notificación del servidor)
@@ -40,38 +40,30 @@ self.addEventListener('push', event => {
         badge: data.badge || '/images/icons/icon-192x192.png',
         image: data.image || undefined,
         data: data.data || {},
-        actions: data.actions || [], // <-- Esto leerá los botones 'open_app' y 'skip'
-        requireInteraction: true // Mantiene la notificación en pantalla
+        actions: data.actions || [], // botones 'open_app' y 'skip'
+        requireInteraction: true
     };
 
     event.waitUntil(self.registration.showNotification(title, options));
 });
 
 /* ------------------------------------------------------------------
-   LISTENER PARA CLICK EN NOTIFICACIÓN (¡CÓDIGO NUEVO!)
+   LISTENER PARA CLICK EN NOTIFICACIÓN
    ------------------------------------------------------------------ */
 self.addEventListener('notificationclick', event => {
     console.log('Service Worker: Clic en Notificación Recibido.');
 
-    // Cierra la notificación
     event.notification.close();
 
     const data = event.notification.data || {};
     const action = event.action; // 'open_app', 'skip', o vacío
 
-
     if (action === 'skip') {
-        // Si el usuario presiona "Saltar"
         console.log('Acción: Saltar');
-        // No hacemos nada, solo cerramos (ya se hizo arriba).
-    
     } else {
-        // Si el usuario presiona "No olvides tu dosis" (action === 'open_app')
-        // O si presiona el cuerpo de la notificación (action === '')
         console.log('Acción: Abrir App');
         
         event.waitUntil(
-            // Abre la URL que pasamos desde el backend
             clients.openWindow(data.url || '/dashboard')
         );
     }

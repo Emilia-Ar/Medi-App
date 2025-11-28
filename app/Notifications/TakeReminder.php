@@ -7,42 +7,40 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Notifications\Messages\BroadcastMessage;
 use NotificationChannels\WebPush\WebPushChannel;
 use NotificationChannels\WebPush\WebPushMessage;
 
-class TakeReminder extends Notification
+class TakeReminder extends Notification implements ShouldQueue
 {
     use Queueable;
 
     protected $take;
 
-    /**
-     * Crea una nueva instancia de la notificación.
-     */
     public function __construct(Take $take)
     {
         $this->take = $take;
     }
 
     /**
-     * Define los canales de entrega.
+     * Canales de entrega (WebPush + Broadcast)
      */
     public function via($notifiable): array
     {
-        return [WebPushChannel::class];
+        return [WebPushChannel::class, 'broadcast'];
     }
 
     /**
-     * Construye el mensaje de Web Push.
+     * 🔹 MÉTODO WEBPUSH — SIN CAMBIOS
      */
     public function toWebPush($notifiable, $notification)
     {
         $medication = $this->take->medication;
         $title = "¡Hora de tu medicina!";
-        
-        // Mensaje actualizado
+
+        // Mensaje original intacto
         $body = "No olvides tu dosis de {$medication->name}.";
-        
+
         // URL pública de la foto (si existe)
         $imageUrl = $medication->photo_path 
             ? Storage::url($medication->photo_path) 
@@ -51,16 +49,28 @@ class TakeReminder extends Notification
         return (new WebPushMessage)
             ->title($title)
             ->body($body)
-            ->icon('/images/icons/icon-192x192.png') // Icono por defecto
-            ->image($imageUrl) // Foto del medicamento
+            ->icon('/images/icons/icon-192x192.png')
+            ->image($imageUrl)
             ->data([
-                // Pasamos la URL a la que debe ir el clic
-                'url' => route('medications.show', $medication), 
+                'url' => route('medications.show', $medication),
             ])
-            ->requireInteraction(true) // Mantiene la notificación en pantalla
-            
-            // Botones de acción actualizados
-            ->action('No olvides tu dosis', 'open_app') // Botón 1 (Abre la app)
-            ->action('Saltar', 'skip');               // Botón 2 (Cierra la alerta)
+            ->requireInteraction(true)
+            ->action('No olvides tu dosis', 'open_app')
+            ->action('Saltar', 'skip');
+    }
+
+    /**
+     * 🔹 Nuevo: evento Broadcast para Echo
+     */
+    public function toBroadcast($notifiable)
+    {
+        $medication = $this->take->medication;
+
+        return new BroadcastMessage([
+            'title' => '¡Recordatorio de Dosis!',
+            'body'  => "Es hora de tu toma de {$medication->name}.",
+            'url'   => route('medications.show', $medication),
+        ]);
     }
 }
+

@@ -25,10 +25,20 @@
 
     <meta name="theme-color" content="#4a90e2">
     <link rel="manifest" href="{{ asset('manifest.json') }}">
-    
+
     <script>
         window.vapidPublicKey = '{{ config('webpush.vapid.public_key') }}';
     </script>
+
+    {{-- 🔹 Agregado justo antes de @vite --}}
+    @auth
+        <script>
+            window.user = {
+                id: {{ auth()->user()->id }},
+                name: @json(auth()->user()->name),
+            };
+        </script>
+    @endauth
 
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -51,4 +61,5 @@
     </div>
 </body>
 </html>
+
 

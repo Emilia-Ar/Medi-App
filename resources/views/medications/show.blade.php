@@ -14,8 +14,11 @@
 
                     <div class="flex flex-col md:flex-row gap-8">
                         @if ($medication->photo_path)
+                            @php
+                                $photoUrl = Storage::disk('public')->url($medication->photo_path);
+                            @endphp
                             <div>
-                                <img src="{{ Storage::url($medication->photo_path) }}" alt="Foto de {{ $medication->name }}"
+                                <img src="{{ $photoUrl }}" alt="Foto de {{ $medication->name }}"
                                      class="w-48 h-48 object-cover rounded-lg shadow-md border-4 border-gray-200 dark:border-gray-700">
                             </div>
                         @endif
@@ -500,6 +503,7 @@
     </style>
 
 </x-app-layout>
+
 
 
 

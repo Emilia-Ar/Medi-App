@@ -103,8 +103,7 @@ function subscribeUserToPush() {
 }
 
 
- //Envía el objeto de suscripción al backend.
-
+// Envía el objeto de suscripción al backend.
 function sendSubscriptionToBackend(subscription) {
     const key = subscription.getKey('p256dh');
     const token = subscription.getKey('auth');
@@ -130,5 +129,50 @@ function sendSubscriptionToBackend(subscription) {
     .then(data => console.log('Suscripción guardada en backend:', data))
     .catch(err => console.error(err));
 }
-// Asegúrate de que el CSRF token está en tu layout (Breeze ya lo incluye)
-// <meta name="csrf-token" content="{{ csrf_token() }}">
+
+
+
+// === WebSocket Notifications (Laravel Echo + Reverb) ===
+// Escucha canal privado del usuario actual
+
+if (typeof window !== 'undefined'
+    && window.user
+    && typeof Echo !== 'undefined'
+) {
+    console.log('[Echo] Escuchando canal privado del usuario', window.user.id);
+
+    function toastContainer() {
+        let c = document.getElementById('echo-toast-container');
+        if (!c) {
+            c = document.createElement('div');
+            c.id = 'echo-toast-container';
+            c.className = 'fixed top-4 right-4 z-50 space-y-2';
+            document.body.appendChild(c);
+        }
+        return c;
+    }
+
+    Echo.private(`App.Models.User.${window.user.id}`)
+        .notification((n) => {
+            console.log('[Echo] Notificación recibida:', n);
+
+            const container = toastContainer();
+            const card = document.createElement('div');
+            card.className =
+                'max-w-xs bg-white dark:bg-gray-800 border-l-4 border-blue-500 ' +
+                'rounded-lg shadow-lg p-4 cursor-pointer transition transform hover:scale-105';
+            card.innerHTML = `
+                <p class="text-sm font-semibold text-blue-700 dark:text-blue-300 mb-1">${n.title}</p>
+                <p class="text-lg text-gray-800 dark:text-gray-100 font-bold">${n.body}</p>
+            `;
+
+            if (n.url) {
+                card.addEventListener('click', () => window.location.href = n.url);
+            }
+
+            container.appendChild(card);
+            setTimeout(() => card.remove(), 7000);
+        });
+} else {
+    console.log('[Echo] No disponible (sin usuario o sin Echo).');
+}

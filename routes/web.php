@@ -1,11 +1,12 @@
-<?php 
+<?php
 
 use App\Http\Controllers\MedicationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TakeController;
-use App\Http\Controllers\PushSubscriptionController; // ✅ Notificaciones
+use App\Http\Controllers\PushSubscriptionController;
 use App\Models\Medication;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,14 +19,29 @@ Route::get('/', function () {
     if (auth()->check()) {
         return redirect()->route('dashboard');
     }
-    
+
     // Si no está logueado, llévalo a la nueva vista de bienvenida.
-    return view('welcome'); 
+    return view('welcome');
 });
+
+// 🔎 Ruta de debug para ver info de la foto de un medicamento
+Route::get('/debug-foto/{medication}', function (Medication $medication) {
+    return [
+        'id'         => $medication->id,
+        'name'       => $medication->name,
+        'photo_path' => $medication->photo_path,
+        'exists'     => $medication->photo_path
+            ? Storage::disk('public')->exists($medication->photo_path)
+            : null,
+        'url'        => $medication->photo_path
+            ? Storage::disk('public')->url($medication->photo_path)
+            : null,
+    ];
+})->middleware(['auth'])->name('debug.medication.photo');
 
 // --- DASHBOARD ---
 Route::get('/dashboard', function () {
-    
+
     // 1. Obtenemos TODOS los medicamentos del usuario
     $medications = Medication::where('user_id', auth()->id())
         ->orderBy('name')
@@ -39,8 +55,8 @@ Route::get('/dashboard', function () {
 
     // 3. Pasamos las variables correctas a la vista
     return view('dashboard', [
-        'medications' => $medications,
-        'lowStockMedications' => $lowStockMedications,
+        'medications'          => $medications,
+        'lowStockMedications'  => $lowStockMedications,
     ]);
 
 })->middleware(['auth', 'verified'])->name('dashboard');
@@ -53,7 +69,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-    
+
     // Stock de medicamentos
     Route::patch('/medications/{medication}/add-stock', [MedicationController::class, 'addStock'])
         ->name('medications.addStock');
@@ -63,7 +79,7 @@ Route::middleware('auth')->group(function () {
 
     // Medicamentos (CRUD)
     Route::resource('medications', MedicationController::class);
-    
+
     // Marcar toma como completada
     Route::patch('/takes/{take}/complete', [TakeController::class, 'complete'])
         ->name('takes.complete');
@@ -81,5 +97,6 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
 
 
