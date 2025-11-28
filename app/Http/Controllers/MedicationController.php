@@ -42,15 +42,15 @@ class MedicationController extends Controller
     {
         // 1. VALIDACIÓN
         $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'photo' => 'nullable|image|max:1024',
-            'total_stock' => 'required|integer|min:1',
-            'stock_unit' => 'required|string|max:50',
-            'dose_quantity' => 'required|integer|min:1',
-            'dose_type' => 'required|string|in:unit,half,quarter,drop',
+            'name'            => 'required|string|max:255',
+            'description'     => 'nullable|string',
+            'photo'           => 'nullable|image|max:1024',
+            'total_stock'     => 'required|integer|min:1',
+            'stock_unit'      => 'required|string|max:50',
+            'dose_quantity'   => 'required|integer|min:1',
+            'dose_type'       => 'required|string|in:unit,half,quarter,drop',
             'frequency_hours' => 'required|integer|in:4,6,8,12,24',
-            'start_time' => 'required|date_format:H:i',
+            'start_time'      => 'required|date_format:H:i',
         ]);
 
         // 2. MANEJAR LA FOTO
@@ -59,20 +59,13 @@ class MedicationController extends Controller
             $path = $request->file('photo')->store('photos', 'public');
         }
 
-        // --- BLOQUE CORREGIDO ---
-        
         // 3. PREPARAR DATOS ADICIONALES
-        $data['user_id'] = auth()->id();
+        $data['user_id']       = auth()->id();
         $data['current_stock'] = $data['total_stock']; // El stock actual es igual al total al crearlo
-        $data['photo_path'] = $path; // Añadimos la ruta de la foto (que es null si no se subió)
+        $data['photo_path']    = $path; // Null si no se subió foto
 
         // 4. CREAR EL MODELO
-        // Pasamos el array $data completo. El Modelo (Medication.php)
-        // usará la lista $fillable para tomar solo los campos que necesita
-        // (incluyendo 'stock_unit' y 'dose_type').
         $medication = Medication::create($data);
-        
-        // --- FIN DEL BLOQUE CORREGIDO ---
 
         // 5. GENERAR TOMAS
         $this->scheduleService->generateTakes($medication);
@@ -91,13 +84,11 @@ class MedicationController extends Controller
         }
 
         // Aliases para que la vista funcione sin cambiar nombres
-        // La BD tiene: description, dose_quantity, stock_unit
-        // La vista usa: notes, dose_value, dose_label
         $medication->notes      = $medication->description;
         $medication->dose_value = $medication->dose_quantity;
         $medication->dose_label = $medication->stock_unit;
 
-        // ✅ LÓGICA ORIGINAL: tomas de hoy
+        // ✅ Tomas de hoy
         $todaysTakes = $medication->takes()
             ->whereDate('scheduled_at', today())
             ->orderBy('scheduled_at', 'asc')
@@ -128,7 +119,7 @@ class MedicationController extends Controller
 
         $takes = $takesQuery->paginate(10)->withQueryString();
 
-        // Resumen de stock (usando tus campos reales)
+        // Resumen de stock
         $stockActual = $medication->current_stock ?? 0;
 
         // Tomas por día según frecuencia (4, 6, 8, 12, 24)
@@ -204,21 +195,23 @@ class MedicationController extends Controller
 
         // 2. Validación
         $data = $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'photo' => 'nullable|image|max:1024',
-            'dose_quantity' => 'required|integer|min:1',
-            'dose_type' => 'required|string|in:unit,half,quarter,drop',
+            'name'            => 'required|string|max:255',
+            'description'     => 'nullable|string',
+            'photo'           => 'nullable|image|max:1024',
+            'dose_quantity'   => 'required|integer|min:1',
+            'dose_type'       => 'required|string|in:unit,half,quarter,drop',
             'frequency_hours' => 'required|integer|in:4,6,8,12,24',
-            'start_time' => 'required|date_format:H:i',
+            'start_time'      => 'required|date_format:H:i',
         ]);
 
         // 3. Comprobar si el horario cambió
         $newStartTime = Carbon::parse($data['start_time'])->format('H:i:s');
         $oldStartTime = Carbon::parse($medication->start_time)->format('H:i:s');
 
-        // Lógica de comparación estricta
-        $scheduleChanged = ($medication->frequency_hours !== (int) $data['frequency_hours'] || $oldStartTime !== $newStartTime);
+        $scheduleChanged = (
+            $medication->frequency_hours !== (int) $data['frequency_hours'] ||
+            $oldStartTime !== $newStartTime
+        );
 
         // 4. Manejar la subida de la nueva foto
         if ($request->hasFile('photo')) {
@@ -228,18 +221,15 @@ class MedicationController extends Controller
             $data['photo_path'] = $request->file('photo')->store('photos', 'public');
         }
 
-        // 5. Actualizar el modelo (primero)
+        // 5. Actualizar el modelo
         $medication->update($data);
 
-        // 6. Lógica de Recalcular Calendario
+        // 6. Recalcular calendario si cambió la frecuencia u horario
         if ($scheduleChanged) {
-
-            // Borramos TODAS las tomas pendientes (pasadas y futuras)
             $medication->takes()
-                ->whereNull('completed_at') // <-- ¡Corrección!
+                ->whereNull('completed_at')
                 ->delete();
 
-            // Pedimos al servicio que genere el nuevo calendario
             $this->scheduleService->generateTakes($medication);
         }
 
@@ -251,6 +241,8 @@ class MedicationController extends Controller
 
     /**
      * Genera y descarga un reporte PDF de las tomas de un medicamento.
+     * - En local (con GD instalada) genera el PDF normalmente.
+     * - En Railway (sin GD) muestra un mensaje y no rompe la app.
      */
     public function downloadReport(Request $request, Medication $medication)
     {
@@ -262,11 +254,11 @@ class MedicationController extends Controller
         // 2. Validación de fechas
         $validated = $request->validate([
             'start_date' => 'required|date',
-            'end_date' => 'required|date|after_or_equal:start_date',
+            'end_date'   => 'required|date|after_or_equal:start_date',
         ]);
 
         $startDate = Carbon::parse($validated['start_date'])->startOfDay();
-        $endDate = Carbon::parse($validated['end_date'])->endOfDay();
+        $endDate   = Carbon::parse($validated['end_date'])->endOfDay();
 
         // 3. Obtener las tomas
         $takes = $medication->takes()
@@ -276,9 +268,9 @@ class MedicationController extends Controller
 
         // 4. Calcular estadísticas base
         $stats = [
-            'total' => $takes->count(),
+            'total'     => $takes->count(),
             'completed' => $takes->whereNotNull('completed_at')->count(),
-            'missed' => $takes->whereNull('completed_at')->count(),
+            'missed'    => $takes->whereNull('completed_at')->count(),
         ];
 
         // 5. Calcular Tasa de Cumplimiento
@@ -288,27 +280,36 @@ class MedicationController extends Controller
         }
 
         // 6. Cargar el logo en Base64
-        $logoPath = public_path('images/logo-medicina.png');
+        $logoPath   = public_path('images/logo-medicina.png');
         $logoBase64 = null;
         if (file_exists($logoPath)) {
-            $logoData = file_get_contents($logoPath);
+            $logoData   = file_get_contents($logoPath);
             $logoBase64 = base64_encode($logoData);
         }
 
         // 7. Preparar todos los datos para la vista
         $data = [
-            'medication' => $medication,
-            'takes' => $takes,
-            'stats' => $stats,
-            'startDate' => $startDate,
-            'endDate' => $endDate,
-            'logoBase64' => $logoBase64,
-            'user' => auth()->user(),
+            'medication'     => $medication,
+            'takes'          => $takes,
+            'stats'          => $stats,
+            'startDate'      => $startDate,
+            'endDate'        => $endDate,
+            'logoBase64'     => $logoBase64,
+            'user'           => auth()->user(),
             'complianceRate' => $complianceRate,
         ];
 
-        // 8. Cargar el PDF
+        // 7bis. Si el servidor NO tiene la extensión GD, evitamos romper la app en producción
+        if (! extension_loaded('gd')) {
+            return back()->with('status',
+                'No se pudo generar el PDF porque el servidor no tiene instalada la extensión GD. ' .
+                'Podés generar este reporte en PDF desde tu entorno local, donde sí está disponible.'
+            );
+        }
+
+        // 8. Generar y devolver el PDF (funciona en entornos con GD instalada)
         $pdf = Pdf::loadView('reports.medication', $data);
+
         $fileName = 'reporte-' . Str::slug($medication->name) . '-' .
             $startDate->format('Y-m-d') . '-al-' . $endDate->format('Y-m-d') . '.pdf';
 
@@ -332,7 +333,7 @@ class MedicationController extends Controller
 
         $medication->update([
             'current_stock' => $medication->current_stock + $newStock,
-            'total_stock' => $medication->total_stock + $newStock,
+            'total_stock'   => $medication->total_stock + $newStock,
         ]);
 
         return back()->with('status', "¡Stock de {$medication->name} actualizado con éxito!");
@@ -368,11 +369,12 @@ class MedicationController extends Controller
         // Solo descontamos si el stock actual es mayor que 0
         if ($medication->current_stock > 0) {
             $medication->update([
-                'current_stock' => $medication->current_stock - 1
+                'current_stock' => $medication->current_stock - 1,
             ]);
         }
 
         return back()->with('status', "¡Se ha registrado el uso de 1 {$medication->stock_unit}!");
     }
 }
+
 
