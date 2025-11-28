@@ -24,7 +24,7 @@
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
     <meta name="theme-color" content="#4a90e2">
-    <link rel="manifest" href="{{ asset('manifest.json') }}">
+    <link rel="manifest" href="/manifest.json">
 
     <script>
         window.vapidPublicKey = '{{ config('webpush.vapid.public_key') }}';
