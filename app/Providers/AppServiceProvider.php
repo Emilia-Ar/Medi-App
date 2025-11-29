@@ -20,14 +20,26 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Solo en producción (Railway)
         if (app()->environment('production')) {
-            // Forzar https en las URLs generadas por Laravel
+            // 🔒 Forzar HTTPS en todas las URLs generadas
             URL::forceScheme('https');
 
-            // Ignorar los warnings de usuario (como el de WebPush sobre GMP/BCMath)
-            // para que no se conviertan en ErrorException 500
-            error_reporting(E_ALL & ~E_USER_WARNING & ~E_USER_DEPRECATED);
+            // 🛡 Ignorar SOLO el warning de GMP/BCMath que dispara WebPush
+            $previousHandler = set_error_handler(function ($severity, $message, $file, $line) use (&$previousHandler) {
+                // Si el mensaje es el famoso de GMP/BCMath, lo tragamos y NO dejamos que Laravel lo convierta en excepción
+                if (str_contains($message, 'It is highly recommended to install the GMP or BCMath extension')) {
+                    return true; // Stop: no pasa al handler de Laravel
+                }
+
+                // Para todo lo demás, delegamos al handler anterior (el de Laravel/Symfony)
+                if ($previousHandler) {
+                    return $previousHandler($severity, $message, $file, $line);
+                }
+
+                // Dejar que PHP haga lo que haría normalmente
+                return false;
+            });
         }
     }
 }
+
