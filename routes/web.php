@@ -1,3 +1,4 @@
+
 <?php
 
 use App\Http\Controllers\MedicationController;
@@ -5,6 +6,10 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\TakeController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Models\Medication;
+use App\Models\User;
+use App\Models\Take;
+use App\Notifications\TakeReminder;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
@@ -62,6 +67,33 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 
+// ✅ RUTA DE PRUEBA PARA WEBPUSH EN PRODUCCIÓN
+Route::get('/test-push', function () {
+    // Usuario logueado o el primero (solo para debug)
+    $user = Auth::user() ?? User::first();
+
+    if (! $user) {
+        return 'No hay usuarios en la base de datos para probar.';
+    }
+
+    // Buscamos una Take asociada a un medicamento de este usuario
+    $take = Take::whereHas('medication', function ($query) use ($user) {
+            $query->where('user_id', $user->id);
+        })
+        ->orderBy('scheduled_for') // o la columna que uses para fecha/hora
+        ->first();
+
+    if (! $take) {
+        return 'No encontré ninguna toma (takes) asociada a tus medicamentos. Crea al menos una para probar.';
+    }
+
+    // Enviamos la notificación WebPush real que usas en tu app
+    $user->notify(new TakeReminder($take));
+
+    return 'Notificación enviada con TakeReminder, si todo está bien deberías verla en unos segundos 🔔';
+})->middleware(['auth'])->name('debug.test.push');
+
+
 // Rutas autenticadas
 Route::middleware('auth')->group(function () {
 
@@ -97,6 +129,5 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
-
 
 
