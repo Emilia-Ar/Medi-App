@@ -1,4 +1,3 @@
-
 <?php
 
 use App\Http\Controllers\MedicationController;
@@ -76,19 +75,20 @@ Route::get('/test-push', function () {
         return 'No hay usuarios en la base de datos para probar.';
     }
 
-    // Buscamos una Take asociada a un medicamento de este usuario
+    // Buscamos alguna Take asociada a un medicamento de este usuario
     $take = Take::whereHas('medication', function ($query) use ($user) {
             $query->where('user_id', $user->id);
         })
-        ->orderBy('scheduled_for') // o la columna que uses para fecha/hora
+        ->orderBy('id', 'desc') // 🔁 usamos id, que seguro existe
         ->first();
 
     if (! $take) {
         return 'No encontré ninguna toma (takes) asociada a tus medicamentos. Crea al menos una para probar.';
     }
 
-    // Enviamos la notificación WebPush real que usas en tu app
-    $user->notify(new TakeReminder($take));
+    // Enviamos la notificación WebPush real SIN pasar por la cola
+    // notifyNow ignora ShouldQueue y la ejecuta en el acto
+    $user->notifyNow(new TakeReminder($take));
 
     return 'Notificación enviada con TakeReminder, si todo está bien deberías verla en unos segundos 🔔';
 })->middleware(['auth'])->name('debug.test.push');
@@ -129,5 +129,6 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
 
 
