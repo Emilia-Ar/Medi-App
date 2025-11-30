@@ -5,10 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Medication;
 use App\Services\ScheduleService;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Intervention\Image\ImageManager;
+use Intervention\Image\Drivers\Gd\Driver as GdDriver;
 
 class MedicationController extends Controller
 {
@@ -44,7 +47,8 @@ class MedicationController extends Controller
         $data = $request->validate([
             'name'            => 'required|string|max:255',
             'description'     => 'nullable|string',
-            'photo'           => 'nullable|image|max:1024',
+            // ⬇⬇⬇ ampliamos a 8 MB, porque la cámara del celu genera fotos grandes
+            'photo'           => 'nullable|image|max:8192',
             'total_stock'     => 'required|integer|min:1',
             'stock_unit'      => 'required|string|max:50',
             'dose_quantity'   => 'required|integer|min:1',
@@ -53,10 +57,10 @@ class MedicationController extends Controller
             'start_time'      => 'required|date_format:H:i',
         ]);
 
-        // 2. MANEJAR LA FOTO
+        // 2. MANEJAR LA FOTO (redimensionar / comprimir)
         $path = null;
         if ($request->hasFile('photo')) {
-            $path = $request->file('photo')->store('photos', 'public');
+            $path = $this->processPhoto($request->file('photo'));
         }
 
         // 3. PREPARAR DATOS ADICIONALES
@@ -197,7 +201,8 @@ class MedicationController extends Controller
         $data = $request->validate([
             'name'            => 'required|string|max:255',
             'description'     => 'nullable|string',
-            'photo'           => 'nullable|image|max:1024',
+            // ⬇⬇⬇ ampliamos a 8 MB también aquí
+            'photo'           => 'nullable|image|max:8192',
             'dose_quantity'   => 'required|integer|min:1',
             'dose_type'       => 'required|string|in:unit,half,quarter,drop',
             'frequency_hours' => 'required|integer|in:4,6,8,12,24',
@@ -215,10 +220,13 @@ class MedicationController extends Controller
 
         // 4. Manejar la subida de la nueva foto
         if ($request->hasFile('photo')) {
+            // Borrar la anterior si existe
             if ($medication->photo_path) {
                 Storage::disk('public')->delete($medication->photo_path);
             }
-            $data['photo_path'] = $request->file('photo')->store('photos', 'public');
+
+            // Guardar la nueva procesada
+            $data['photo_path'] = $this->processPhoto($request->file('photo'));
         }
 
         // 5. Actualizar el modelo
@@ -375,6 +383,35 @@ class MedicationController extends Controller
 
         return back()->with('status', "¡Se ha registrado el uso de 1 {$medication->stock_unit}!");
     }
+
+    /**
+     * Procesa la foto del medicamento:
+     * - Respeta la orientación del celular según EXIF.
+     * - Redimensiona hasta 1600x1600 manteniendo proporciones.
+     * - Convierte a JPG comprimido para reducir el peso.
+     */
+    private function processPhoto(UploadedFile $photo): string
+    {
+        // Crear el manager de imágenes con el driver GD
+        $manager = new ImageManager(new GdDriver());
+
+        // Leer la imagen, corregir orientación y escalar a un tamaño razonable
+        $image = $manager->read($photo->getRealPath())
+            ->orient()
+            ->scaleDown(1600, 1600);
+
+        // Codificar como JPG con calidad 80 (buena calidad / peso moderado)
+        $encoded = $image->toJpeg(80);
+
+        // Generar un nombre único dentro de la carpeta photos/
+        $filename = 'photos/' . Str::uuid() . '.jpg';
+
+        // Guardar en el disco 'public'
+        Storage::disk('public')->put($filename, (string) $encoded);
+
+        return $filename;
+    }
 }
+
 
 

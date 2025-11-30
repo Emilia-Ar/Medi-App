@@ -36,9 +36,17 @@
                         <label for="photo" class="block text-xl font-medium text-gray-700 dark:text-gray-200">
                             Foto (Opcional)
                         </label>
-                        <input type="file" name="photo" id="photo" accept="image/*"
-                               class="mt-2 block w-full text-lg text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 focus:outline-none">
-                        <p class="mt-1 text-base text-gray-500 dark:text-gray-400">Una foto clara de la caja o la pastilla.</p>
+                        <input
+                            type="file"
+                            name="photo"
+                            id="photo"
+                            accept="image/*"
+                            capture="environment" {{-- 👈 sugiere usar cámara trasera en móviles --}}
+                            class="mt-2 block w-full text-lg text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 focus:outline-none"
+                        >
+                        <p class="mt-1 text-base text-gray-500 dark:text-gray-400">
+                            Una foto clara de la caja o la pastilla. Se ajusta automáticamente para que no pese tanto.
+                        </p>
                         @error('photo') 
                             <span class="text-red-500 text-base">{{ $message }}</span> 
                         @enderror
@@ -75,6 +83,7 @@
                             @enderror
                         </div>
                     </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                             <label for="dose_quantity" class="block text-xl font-medium text-gray-700 dark:text-gray-200">
@@ -154,3 +163,4 @@
         </div>
     </div>
 </x-app-layout>
+

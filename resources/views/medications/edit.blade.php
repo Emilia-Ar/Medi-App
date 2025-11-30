@@ -7,7 +7,7 @@
 
     <div class="py-12">
         <div class="max-w-3xl mx-auto sm:px-6 lg:px-8">
-            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-xl sm:rounded-lg p-6 lg:p-8">
+            <div class="bg-white dark:bg-gray-800 overflow-hidden shadow-xl sm:rounded-lg p-6 lg:px-8">
 
                 <form action="{{ route('medications.update', $medication) }}" method="POST" enctype="multipart/form-data" class="space-y-8">
                     @csrf
@@ -43,10 +43,16 @@
                                      class="w-24 h-24 rounded-lg object-cover border border-gray-300 dark:border-gray-700">
                             </div>
                         @endif
-                        <input type="file" name="photo" id="photo" accept="image/*"
-                               class="mt-2 block w-full text-lg text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 focus:outline-none">
+                        <input
+                            type="file"
+                            name="photo"
+                            id="photo"
+                            accept="image/*"
+                            capture="environment" {{-- sugiere cámara trasera en móviles --}}
+                            class="mt-2 block w-full text-lg text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 focus:outline-none"
+                        >
                         <p class="mt-1 text-base text-gray-500 dark:text-gray-400">
-                            Sube una nueva imagen solo si deseas reemplazar la actual.
+                            Sube una nueva imagen solo si deseas reemplazar la actual. La foto se ajusta automáticamente para que no pese tanto.
                         </p>
                         @error('photo')
                             <span class="text-red-500 text-base">{{ $message }}</span>
@@ -83,6 +89,7 @@
                             <span class="text-red-500 text-base">{{ $message }}</span> 
                         @enderror
                     </div>
+
                     <hr class="border-gray-300 dark:border-gray-700">
 
                     <div>
