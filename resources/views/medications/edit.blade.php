@@ -48,11 +48,11 @@
                             name="photo"
                             id="photo"
                             accept="image/*"
-                            capture="environment" {{-- sugiere cámara trasera en móviles --}}
                             class="mt-2 block w-full text-lg text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 focus:outline-none"
                         >
                         <p class="mt-1 text-base text-gray-500 dark:text-gray-400">
-                            Sube una nueva imagen solo si deseas reemplazar la actual. La foto se ajusta automáticamente para que no pese tanto.
+                            Podés sacar una nueva foto con la cámara o elegir una imagen guardada en tu celular. 
+                            La imagen se ajusta automáticamente para que no pese tanto.
                         </p>
                         @error('photo')
                             <span class="text-red-500 text-base">{{ $message }}</span>
@@ -77,7 +77,9 @@
                     </div>
 
                     <div>
-                        <label for="dose_type" class="block text-xl font-medium text-gray-700 dark:text-gray-200">Tipo de Dosis</label>
+                        <label for="dose_type" class="block text-xl font-medium text-gray-700 dark:text-gray-200">
+                            Tipo de Dosis
+                        </label>
                         <select name="dose_type" id="dose_type" required
                                 class="mt-2 block w-full text-lg border-gray-300 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 rounded-lg shadow-sm focus:border-blue-500 focus:ring-blue-500">
                             <option value="unit" @selected(old('dose_type', $medication->dose_type) == 'unit')>Unidad(es) (Ej: 1 pastilla)</option>
@@ -146,3 +148,4 @@
         </div>
     </div>
 </x-app-layout>
+

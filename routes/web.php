@@ -35,10 +35,10 @@ Route::get('/debug-foto/{medication}', function (Medication $medication) {
         'name'       => $medication->name,
         'photo_path' => $medication->photo_path,
         'exists'     => $medication->photo_path
-            ? Storage::disk('public')->exists($medication->photo_path)
+            ? Storage::exists($medication->photo_path)
             : null,
         'url'        => $medication->photo_path
-            ? Storage::disk('public')->url($medication->photo_path)
+            ? Storage::url($medication->photo_path)
             : null,
     ];
 })->middleware(['auth'])->name('debug.medication.photo');
@@ -59,8 +59,8 @@ Route::get('/dashboard', function () {
 
     // 3. Pasamos las variables correctas a la vista
     return view('dashboard', [
-        'medications'          => $medications,
-        'lowStockMedications'  => $lowStockMedications,
+        'medications'         => $medications,
+        'lowStockMedications' => $lowStockMedications,
     ]);
 
 })->middleware(['auth', 'verified'])->name('dashboard');
@@ -129,6 +129,7 @@ Route::middleware('auth')->group(function () {
 });
 
 require __DIR__.'/auth.php';
+
 
 
 

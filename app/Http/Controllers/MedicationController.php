@@ -12,6 +12,9 @@ use Carbon\Carbon;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Intervention\Image\ImageManager;
 use Intervention\Image\Drivers\Gd\Driver as GdDriver;
+use Intervention\Image\Drivers\Imagick\Driver as ImagickDriver; // 👈 añadido para posible uso de Imagick
+use Intervention\Image\Encoders\JpegEncoder;
+
 
 class MedicationController extends Controller
 {
@@ -45,16 +48,16 @@ class MedicationController extends Controller
     {
         // 1. VALIDACIÓN
         $data = $request->validate([
-            'name'            => 'required|string|max:255',
-            'description'     => 'nullable|string',
-            // ⬇⬇⬇ ampliamos a 8 MB, porque la cámara del celu genera fotos grandes
-            'photo'           => 'nullable|image|max:8192',
-            'total_stock'     => 'required|integer|min:1',
-            'stock_unit'      => 'required|string|max:50',
-            'dose_quantity'   => 'required|integer|min:1',
-            'dose_type'       => 'required|string|in:unit,half,quarter,drop',
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            // ampliamos a 8 MB, porque la cámara del celu genera fotos grandes
+            'photo' => 'nullable|image|max:8192',
+            'total_stock' => 'required|integer|min:1',
+            'stock_unit' => 'required|string|max:50',
+            'dose_quantity' => 'required|integer|min:1',
+            'dose_type' => 'required|string|in:unit,half,quarter,drop',
             'frequency_hours' => 'required|integer|in:4,6,8,12,24',
-            'start_time'      => 'required|date_format:H:i',
+            'start_time' => 'required|date_format:H:i',
         ]);
 
         // 2. MANEJAR LA FOTO (redimensionar / comprimir)
@@ -64,9 +67,9 @@ class MedicationController extends Controller
         }
 
         // 3. PREPARAR DATOS ADICIONALES
-        $data['user_id']       = auth()->id();
+        $data['user_id'] = auth()->id();
         $data['current_stock'] = $data['total_stock']; // El stock actual es igual al total al crearlo
-        $data['photo_path']    = $path; // Null si no se subió foto
+        $data['photo_path'] = $path; // Null si no se subió foto
 
         // 4. CREAR EL MODELO
         $medication = Medication::create($data);
@@ -88,7 +91,7 @@ class MedicationController extends Controller
         }
 
         // Aliases para que la vista funcione sin cambiar nombres
-        $medication->notes      = $medication->description;
+        $medication->notes = $medication->description;
         $medication->dose_value = $medication->dose_quantity;
         $medication->dose_label = $medication->stock_unit;
 
@@ -140,14 +143,14 @@ class MedicationController extends Controller
             : 0;
 
         $stockSummary = [
-            'stock_actual'   => $stockActual,
-            'tomas_por_dia'  => $tomasPorDia,
+            'stock_actual' => $stockActual,
+            'tomas_por_dia' => $tomasPorDia,
             'dias_cobertura' => $diasCobertura,
         ];
 
         // Adherencia últimos 7 días
         $fromAdherence = now()->subDays(7)->startOfDay();
-        $toAdherence   = now()->endOfDay();
+        $toAdherence = now()->endOfDay();
 
         $takesForAdherence = $medication->takes()
             ->whereBetween('scheduled_at', [$fromAdherence, $toAdherence])
@@ -157,19 +160,19 @@ class MedicationController extends Controller
         $taken = $takesForAdherence->whereNotNull('completed_at')->count();
 
         $adherence = [
-            'taken'      => $taken,
-            'total'      => $total,
+            'taken' => $taken,
+            'total' => $total,
             'percentage' => $total > 0 ? round(($taken / $total) * 100) : 0,
         ];
 
         return view('medications.show', [
-            'medication'       => $medication,
-            'todaysTakes'      => $todaysTakes,
+            'medication' => $medication,
+            'todaysTakes' => $todaysTakes,
             'pastPendingTakes' => $pastPendingTakes,
-            'todaySchedule'    => $todaySchedule,
-            'takes'            => $takes,
-            'stockSummary'     => $stockSummary,
-            'adherence'        => $adherence,
+            'todaySchedule' => $todaySchedule,
+            'takes' => $takes,
+            'stockSummary' => $stockSummary,
+            'adherence' => $adherence,
         ]);
     }
 
@@ -199,14 +202,14 @@ class MedicationController extends Controller
 
         // 2. Validación
         $data = $request->validate([
-            'name'            => 'required|string|max:255',
-            'description'     => 'nullable|string',
-            // ⬇⬇⬇ ampliamos a 8 MB también aquí
-            'photo'           => 'nullable|image|max:8192',
-            'dose_quantity'   => 'required|integer|min:1',
-            'dose_type'       => 'required|string|in:unit,half,quarter,drop',
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            // ampliamos a 8 MB también aquí
+            'photo' => 'nullable|image|max:8192',
+            'dose_quantity' => 'required|integer|min:1',
+            'dose_type' => 'required|string|in:unit,half,quarter,drop',
             'frequency_hours' => 'required|integer|in:4,6,8,12,24',
-            'start_time'      => 'required|date_format:H:i',
+            'start_time' => 'required|date_format:H:i',
         ]);
 
         // 3. Comprobar si el horario cambió
@@ -262,11 +265,11 @@ class MedicationController extends Controller
         // 2. Validación de fechas
         $validated = $request->validate([
             'start_date' => 'required|date',
-            'end_date'   => 'required|date|after_or_equal:start_date',
+            'end_date' => 'required|date|after_or_equal:start_date',
         ]);
 
         $startDate = Carbon::parse($validated['start_date'])->startOfDay();
-        $endDate   = Carbon::parse($validated['end_date'])->endOfDay();
+        $endDate = Carbon::parse($validated['end_date'])->endOfDay();
 
         // 3. Obtener las tomas
         $takes = $medication->takes()
@@ -276,9 +279,9 @@ class MedicationController extends Controller
 
         // 4. Calcular estadísticas base
         $stats = [
-            'total'     => $takes->count(),
+            'total' => $takes->count(),
             'completed' => $takes->whereNotNull('completed_at')->count(),
-            'missed'    => $takes->whereNull('completed_at')->count(),
+            'missed' => $takes->whereNull('completed_at')->count(),
         ];
 
         // 5. Calcular Tasa de Cumplimiento
@@ -288,28 +291,29 @@ class MedicationController extends Controller
         }
 
         // 6. Cargar el logo en Base64
-        $logoPath   = public_path('images/logo-medicina.png');
+        $logoPath = public_path('images/logo-medicina.png');
         $logoBase64 = null;
         if (file_exists($logoPath)) {
-            $logoData   = file_get_contents($logoPath);
+            $logoData = file_get_contents($logoPath);
             $logoBase64 = base64_encode($logoData);
         }
 
         // 7. Preparar todos los datos para la vista
         $data = [
-            'medication'     => $medication,
-            'takes'          => $takes,
-            'stats'          => $stats,
-            'startDate'      => $startDate,
-            'endDate'        => $endDate,
-            'logoBase64'     => $logoBase64,
-            'user'           => auth()->user(),
+            'medication' => $medication,
+            'takes' => $takes,
+            'stats' => $stats,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'logoBase64' => $logoBase64,
+            'user' => auth()->user(),
             'complianceRate' => $complianceRate,
         ];
 
         // 7bis. Si el servidor NO tiene la extensión GD, evitamos romper la app en producción
-        if (! extension_loaded('gd')) {
-            return back()->with('status',
+        if (!extension_loaded('gd')) {
+            return back()->with(
+                'status',
                 'No se pudo generar el PDF porque el servidor no tiene instalada la extensión GD. ' .
                 'Podés generar este reporte en PDF desde tu entorno local, donde sí está disponible.'
             );
@@ -341,7 +345,7 @@ class MedicationController extends Controller
 
         $medication->update([
             'current_stock' => $medication->current_stock + $newStock,
-            'total_stock'   => $medication->total_stock + $newStock,
+            'total_stock' => $medication->total_stock + $newStock,
         ]);
 
         return back()->with('status', "¡Stock de {$medication->name} actualizado con éxito!");
@@ -387,29 +391,50 @@ class MedicationController extends Controller
     /**
      * Procesa la foto del medicamento:
      * - Respeta la orientación del celular según EXIF.
-     * - Redimensiona hasta 1600x1600 manteniendo proporciones.
+     * - Redimensiona hasta 1024x1024 manteniendo proporciones.
      * - Convierte a JPG comprimido para reducir el peso.
+     * - Si no hay GD/Imagick, guarda el archivo original (fallback) para no romper en producción.
      */
     private function processPhoto(UploadedFile $photo): string
     {
-        // Crear el manager de imágenes con el driver GD
-        $manager = new ImageManager(new GdDriver());
+        // Nombre destino por defecto
+        $filename = (string) Str::uuid() . '.jpg';
+        $path = 'photos/' . $filename;
 
-        // Leer la imagen, corregir orientación y escalar a un tamaño razonable
-        $image = $manager->read($photo->getRealPath())
-            ->orient()
-            ->scaleDown(1600, 1600);
+        try {
+            $manager = null;
 
-        // Codificar como JPG con calidad 80 (buena calidad / peso moderado)
-        $encoded = $image->toJpeg(80);
+            // 1) Preferir GD si la extensión está disponible
+            if (extension_loaded('gd')) {
+                $manager = new ImageManager(new GdDriver());
+            }
+            // 2) Si no hay GD, probar Imagick si está disponible
+            elseif (extension_loaded('imagick') && class_exists(ImagickDriver::class)) {
+                $manager = new ImageManager(new ImagickDriver());
+            }
 
-        // Generar un nombre único dentro de la carpeta photos/
-        $filename = 'photos/' . Str::uuid() . '.jpg';
+            if ($manager) {
+                // Escalamos manteniendo proporción hasta 1024x1024
+                $image = $manager
+                    ->read($photo->getPathname())
+                    ->orient()
+                    ->scaleDown(1024, 1024);
 
-        // Guardar en el disco 'public'
-        Storage::disk('public')->put($filename, (string) $encoded);
+                // 👇 encode con la API nueva de Intervention v3
+                $encoded = $image->encode(new JpegEncoder(quality: 80));
 
-        return $filename;
+                // Guardar como JPG comprimido en el disco public
+                Storage::disk('public')->put($path, (string) $encoded);
+
+                return $path;
+            }
+
+            // 3) Fallback: sin drivers → guardar original
+            return $photo->store('photos', 'public');
+        } catch (\Throwable $e) {
+            // Cualquier fallo en procesamiento → fallback seguro
+            return $photo->store('photos', 'public');
+        }
     }
 }
 

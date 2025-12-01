@@ -41,11 +41,11 @@
                             name="photo"
                             id="photo"
                             accept="image/*"
-                            capture="environment" {{-- 👈 sugiere usar cámara trasera en móviles --}}
                             class="mt-2 block w-full text-lg text-gray-900 dark:text-gray-100 border border-gray-300 dark:border-gray-700 rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-700 focus:outline-none"
                         >
                         <p class="mt-1 text-base text-gray-500 dark:text-gray-400">
-                            Una foto clara de la caja o la pastilla. Se ajusta automáticamente para que no pese tanto.
+                            Podés sacar una foto con la cámara o elegir una imagen guardada en tu celular. 
+                            La imagen se ajusta automáticamente para que no pese tanto.
                         </p>
                         @error('photo') 
                             <span class="text-red-500 text-base">{{ $message }}</span> 
@@ -153,7 +153,7 @@
                             Cancelar
                         </a>
                         <button type="submit" 
-                                class="inline-flex items-center px-8 py-5 bg-blue-600 border border-transparent rounded-lg font-semibold text-xl text-white uppercase tracking-widest hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duration-150">
+                                class="inline-flex items-center px-8 py-5 bg-blue-600 border border-transparent rounded-lg font-semibold text-xl text-white uppercase tracking-widest hover:bg-blue-700 active:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition ease-in-out duración-150">
                             Guardar Medicamento
                         </button>
                     </div>
@@ -163,4 +163,5 @@
         </div>
     </div>
 </x-app-layout>
+
 
